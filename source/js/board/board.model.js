@@ -89,14 +89,14 @@ export default class BoardModel {
 
     parseMovement(figure) {
         let { x, y } = figure.position
-        const allMovement = figure.showMovement(this.figures)
+        const allMovement = figure.getPossibleSteps(this.figures)
         const possibleMovement = this.parsePossibleMovement(figure, allMovement)
 
         if (!this.isCheck || this.figures[y][x].type !== 'king') this.cells[y][x] = 'selected'
 
         possibleMovement.moves.map(item => {
             const [x, y] = item
-            if (figure.type === 'pawn' && figure.movement[figure.color].swap === y) {
+            if (figure.type === 'pawn' && figure.movement.swap === y) {
                 this.cells[y][x] = 'swap'
             } else {
                 this.cells[y][x] = 'active'
@@ -105,7 +105,7 @@ export default class BoardModel {
         possibleMovement.kills.map(item => {
             const [x, y] = item
 
-            if (figure.type === 'pawn' && figure.movement[figure.color].swap === y) {
+            if (figure.type === 'pawn' && figure.movement.swap === y) {
                 this.cells[y][x] = 'swap'
             } else {
                 this.cells[y][x] = 'danger'
@@ -141,7 +141,7 @@ export default class BoardModel {
 
     hasAnyMovement(figuresFiltered) {
         for ( const figure of figuresFiltered ) {
-            let movement = figure.showMovement(this.figures)
+            let movement = figure.getPossibleSteps(this.figures)
             let possibleMovement = this.parsePossibleMovement(figure, movement)
             if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0) {
                 return false
@@ -168,7 +168,7 @@ export default class BoardModel {
             for ( let x = 0; x < this.figures[y].length; x++ ) {
                 let item = this.figures[y][x]
                 if(item) {
-                    let kills = item.showMovement(this.figures).kills
+                    let kills = item.getPossibleSteps(this.figures).kills
                     kills.forEach(kill => {
                         if (this.figures[kill[1]][kill[0]].type === 'king') {
                             res = this.figures[kill[1]][kill[0]]

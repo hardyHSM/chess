@@ -35,18 +35,18 @@ export default class King extends Figure {
 
         this.castling.forEach(offsetCells => {
             for ( const offsetX of offsetCells ) {
-                let { x: kingPosX, y: kingPosY } = this.position
+                const { x: kingPosX, y: kingPosY } = this.position
 
                 const cellStatus = this.getCellStatus(kingPosX + offsetX, kingPosY, model)
                 if (cellStatus === 'outsideBoard' && cellStatus !== 'rook') {
                     break
                 }
                 if (cellStatus === 'rook') {
-                    let rook = model[kingPosY][kingPosX + offsetX]
+                    const rook = model[kingPosY][kingPosX + offsetX]
                     if (Math.abs(offsetX) <= 2) break
 
-                    let offsetPositionKing = [kingPosX + offsetCells[1], kingPosY]
-                    let offsetPositionRook = [
+                    const offsetPositionKing = [kingPosX + offsetCells[1], kingPosY]
+                    const offsetPositionRook = [
                         offsetX > 0 ? (offsetPositionKing[0] - 1) : (offsetPositionKing[0] + 1),
                         kingPosY
                     ]

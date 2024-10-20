@@ -1,6 +1,7 @@
 import Figure from '../core/figure'
 import imgBlack from '../../assets/pawn-black.svg'
 import imgWhite from '../../assets/pawn-white.svg'
+import { cloneDeep } from 'lodash'
 
 export default class Pawn extends Figure {
     constructor({ x, y, color }) {
@@ -8,22 +9,10 @@ export default class Pawn extends Figure {
             x, y, color,
             type: 'pawn',
             movement: {
-                black: {
-                    firstStep: {
-                        1: [[0, 1], [0, 2]]
-                    },
-                    steps: [[0, 1]],
-                    kills: [[1, 1], [-1, 1]],
-                    swap: 7
-                },
-                white: {
-                    firstStep: {
-                        6: [[0, -1], [0, -2]]
-                    },
-                    steps: [[0, -1]],
-                    kills: [[-1, -1], [1, -1]],
-                    swap: 0
-                }
+                kills: color === 'white' ? [[-1, -1], [1, -1]] : [[1, 1], [-1, 1]],
+                steps: color === 'white' ? [[0, -1], [0, -2]] : [[0, 1], [0, 2]],
+                startPos: color === 'white' ? 6 : 1,
+                swap: color === 'white' ? 7 : 0
             },
             img: {
                 white: imgWhite,
@@ -39,33 +28,30 @@ export default class Pawn extends Figure {
             swap: []
         }
         if (!Array.isArray(this.movement)) {
-            let movement = this.movement[this.color]
+            const movement = cloneDeep(this.movement)
+            const [pawnPosX, pawnPosY] = [this.position.x, this.position.y]
 
-            let [pawnPosX, pawnPosY] = [this.position.x, this.position.y]
-
-            if (movement.firstStep[pawnPosY]) {
-                movement.firstStep[pawnPosY].forEach(cell => {
-                    let [x, y] = cell
-                    let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
-
-                    if (cellStatus !== 'outsideBoard' || cellStatus !== 'stop') {
-                        result.moves.push([pawnPosX + x, pawnPosY + y])
-                    }
-                })
-            } else {
-                movement.steps.map(cell => {
-                    let [x, y] = cell
-                    let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
-                    if (cellStatus !== 'outsideBoard') {
-                        result.moves.push([pawnPosX + x, pawnPosY + y])
-                    }
-                })
+            if (pawnPosY !== movement.startPos) {
+                movement.steps.length = 1
             }
+
+            movement.steps.forEach(moveOffset => {
+                const [moveOffsetX, moveOffsetY] = moveOffset
+                const [cellPosX, cellPosY] = [pawnPosX + moveOffsetX, pawnPosY + moveOffsetY]
+
+                let cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
+
+                if (cellStatus !== 'outsideBoard' && cellStatus !== 'stop') {
+                    result.moves.push([cellPosX, cellPosY])
+                }
+            })
+
+
             movement.kills.map(item => {
                 let [x, y] = item
                 let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
 
-                if (cellStatus === 'kill') {
+                if (cellStatus === 'stop') {
                     result.kills.push([pawnPosX + x, pawnPosY + y])
                 }
             })
@@ -73,15 +59,15 @@ export default class Pawn extends Figure {
         return result
     }
 
+
     getCellStatus(x, y, model) {
         if (this.isOutsideBoard(x, y, model)) {
             return 'outsideBoard'
         }
         const figure = model[y][x]
-        if (figure && figure.color !== this.color) {
-            return 'kill'
-        }
-        if (figure && (figure.color !== this.color || figure.color === this.color)) {
+        if (!figure) {
+            return 'free'
+        } else if (figure.color !== this.color) {
             return 'stop'
         }
 

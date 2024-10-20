@@ -20,12 +20,11 @@ export default class Figure {
         if (Array.isArray(this.movement)) {
             this.movement.forEach(row => {
                 for ( const moveOffset of row ) {
-                    let [moveOffsetX, moveOffsetY] = moveOffset
-                    let [figureX, figureY] = [this.position.x, this.position.y]
-
+                    const [moveOffsetX, moveOffsetY] = moveOffset
+                    const [figureX, figureY] = [this.position.x, this.position.y]
                     const [cellPosX, cellPosY] = [figureX + moveOffsetX, figureY + moveOffsetY]
 
-                    let cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
+                    const cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
 
 
                     if (cellStatus === 'free') {

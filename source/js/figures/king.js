@@ -30,19 +30,18 @@ export default class King extends Figure {
     }
 
     showMovement(model) {
-        const res = super.showMovement(model)
+        const res = super.getPossibleSteps(model)
         const castling = []
 
         this.castling.forEach(offsetCells => {
             for ( const offsetX of offsetCells ) {
                 let { x: kingPosX, y: kingPosY } = this.position
 
-
-                const collisionResult = this.checkCollision(kingPosX + offsetX, kingPosY, model)
-                if (collisionResult && collisionResult !== 'rook') {
+                const cellStatus = this.getCellStatus(kingPosX + offsetX, kingPosY, model)
+                if (cellStatus === 'outsideBoard' && cellStatus !== 'rook') {
                     break
                 }
-                if (collisionResult === 'rook') {
+                if (cellStatus === 'rook') {
                     let rook = model[kingPosY][kingPosX + offsetX]
                     if (Math.abs(offsetX) <= 2) break
 
@@ -66,17 +65,17 @@ export default class King extends Figure {
         return res
     }
 
-    checkCollision(x, y, model) {
-        const length = model.length
-        if (y >= length || y < 0 || x >= length || x < 0) {
-            return true
+    getCellStatus(x, y, model) {
+        if (this.isOutsideBoard(x, y, model)) {
+            return 'outsideBoard'
         }
-        const cell = model[y][x]
-        if (!cell) {
-            return false
-        } else if (cell.color !== this.color) {
+
+        const figure = model[y][x]
+        if (!figure) {
+            return 'free'
+        } else if (figure.color !== this.color) {
             return 'kill'
-        } else if (cell.color === this.color && cell.type === 'rook') {
+        } else if (figure.color === this.color && figure.type === 'rook') {
             return 'rook'
         } else {
             return 'stop'

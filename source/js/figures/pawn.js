@@ -32,7 +32,7 @@ export default class Pawn extends Figure {
         })
     }
 
-    showMovement(model) {
+    getPossibleSteps(model) {
         const result = {
             moves: [],
             kills: [],
@@ -41,32 +41,31 @@ export default class Pawn extends Figure {
         if (!Array.isArray(this.movement)) {
             let movement = this.movement[this.color]
 
-            const pawnPosY = this.position.y
-            const pawnPosX = this.position.x
+            let [pawnPosX, pawnPosY] = [this.position.x, this.position.y]
 
-            if (pawnPosY && movement.firstStep[pawnPosY]) {
-                movement.firstStep[pawnPosY].forEach(item => {
-                    let [x, y] = item
-                    let collisionResult = this.checkCollision(pawnPosX + x, pawnPosY + y, model)
+            if (movement.firstStep[pawnPosY]) {
+                movement.firstStep[pawnPosY].forEach(cell => {
+                    let [x, y] = cell
+                    let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
 
-                    if (!collisionResult || collisionResult !== 'stop') {
+                    if (cellStatus !== 'outsideBoard' || cellStatus !== 'stop') {
                         result.moves.push([pawnPosX + x, pawnPosY + y])
                     }
                 })
             } else {
-                movement.steps.map(item => {
-                    let [x, y] = item
-                    let collisionResult = this.checkCollision(pawnPosX + x, pawnPosY + y, model)
-                    if (!collisionResult) {
-                        result.moves.push([pawnPosX + x, pawnPosY+ y])
+                movement.steps.map(cell => {
+                    let [x, y] = cell
+                    let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
+                    if (cellStatus !== 'outsideBoard') {
+                        result.moves.push([pawnPosX + x, pawnPosY + y])
                     }
                 })
             }
             movement.kills.map(item => {
                 let [x, y] = item
-                let collisionResult = this.checkKills(pawnPosX + x, pawnPosY + y, model)
+                let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
 
-                if (collisionResult === 'kill') {
+                if (cellStatus === 'kill') {
                     result.kills.push([pawnPosX + x, pawnPosY + y])
                 }
             })
@@ -74,21 +73,15 @@ export default class Pawn extends Figure {
         return result
     }
 
-    checkKills(x, y, model) {
-        const length = model.length
-        if (y >= length || y < 0 || x >= length || x < 0) return false
-
-        const cell = model[y][x]
-        if (cell && cell.color !== this.color) return 'kill'
-    }
-
-    checkCollision(x, y, model) {
-        const length = model.length
-        if (y >= length || y < 0 || x >= length || x < 0) {
-            return true
+    getCellStatus(x, y, model) {
+        if (this.isOutsideBoard(x, y, model)) {
+            return 'outsideBoard'
         }
-        const cell = model[y][x]
-        if (cell && (cell.color !== this.color || cell.color === this.color)) {
+        const figure = model[y][x]
+        if (figure && figure.color !== this.color) {
+            return 'kill'
+        }
+        if (figure && (figure.color !== this.color || figure.color === this.color)) {
             return 'stop'
         }
 

@@ -1,0 +1,71 @@
+body,*::before,*::after,* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 1500px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+  font-family: sans-serif;
+}
+
+.board {
+  position: relative;
+  padding-top: 0px;
+  canvas {
+    display: block;
+    cursor: pointer;
+  }
+}
+
+.left-board {
+  outline: 35px solid #4D3A3A;
+  margin-right: 85px;
+}
+
+.right-board {
+  outline: 35px solid #4D3A3A;
+  margin-left: 85px;
+}
+
+.wrapper-board {
+  position: relative;
+  border: 5px solid #fff;
+  outline: 35px solid #4D3A3A;
+}
+
+.board-figure-canvas {
+  position: absolute;
+  pointer-events: auto;
+  top: 0;
+  left: 0;
+}
+
+.info-timer {
+  font-size: 36px;
+  font-weight: 600;
+}
+
+.board-row {
+  display: flex;
+}
+
+.wrapper-info {
+  display: flex;
+  width: 100%;
+  padding-bottom: 45px;
+  position: relative;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.info-board-game {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  left: 50%;
+  font-size: 32px;
+}

@@ -8,89 +8,85 @@ import HistoryGame from '../core/history.game'
 import { cloneDeep } from 'lodash'
 
 export default class BoardModel {
+    // startPosition  = [
+    //     [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
+    //     [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
+    //     [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
+    // ]
+
+    startPosition  = [
+        [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
+        [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
+        [[Rook, 'white'], 0, 0, 0, [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
+    ]
     constructor() {
-        this.figures = this.createFigures()
         this.cells = new Array(8).fill(0).map(() => new Array(8).fill(0))
-        this.isCheck = false
         this.history = new HistoryGame()
+        this.figures = this.parseBoard(this.startPosition)
+
+        this.isCheck = false
         window.model = this
     }
 
     clearCells(arg = []) {
-        this.cells = this.cells.map((column) => column.map((item) => arg.includes(item) ? item : 0))
-    }
-
-    createFigures() {
-        // const startPosition = [
-        //     [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
-        //     [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
-        //     [0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 0, 0, 0, 0, 0, 0, 0],
-        //     [0, 0, 0, 0, 0, 0, 0, 0],
-        //     [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
-        //     [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
-        // ]
-
-        const startPosition = [
-            [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [King, 'black'], 0, [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
-            [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], 0, [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [[Pawn, 'white'], [Pawn, 'white'], 0, 0, [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
-            [[Rook, 'white'], 0, 0, 0, [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
-        ]
-
-
-        return this.parseBoard(startPosition)
+        this.cells = this.cells.map((column) => column.map((cell) => arg.includes(cell) ? cell : 0))
     }
 
     parseBoard(startPosition) {
         return startPosition.map((row, y) => {
-            return row.map((item, x) => {
-                if (!item) return item
-                const [type, color] = item
+            return row.map((figure, x) => {
+                if (!figure) return 0
+                const [type, color] = figure
                 return new type({ color, x, y })
             })
         })
     }
 
-    showMovementCells({ from, to }) {
-        this.clearCells(['check'])
+    showPrevStep({ from, to }) {
         this.cells[from.y][from.x] = 'movement'
         this.cells[to.y][to.x] = 'movement'
     }
 
-    checkDanger(figure, cell) {
-        const [x, y] = cell
-        let [figurePosX, figurePosY] = [figure.position.x, figure.position.y]
-        let res = this.figures[y][x]
-
-        this.figures[figurePosY][figurePosX] = 0
-        this.figures[y][x] = figure
-
-        let checkedItem = this.getIsCheck()
-
-
-        this.figures[figurePosY][figurePosX] = figure
-        this.figures[y][x] = res
-
-        return !(checkedItem && checkedItem.color === figure.color)
+    changeFigurePos(sourceX, sourceY, targetX, targetY, insteadCell = 0) {
+        const replaceCell = this.figures[targetY][targetX]
+        this.figures[targetY][targetX] = this.figures[sourceY][sourceX]
+        this.figures[sourceY][sourceX] = insteadCell
+        return replaceCell
     }
 
-    parsePossibleMovement(figure, data) {
-        data.moves = data.moves.filter(item => this.checkDanger(figure, item))
-        data.kills = data.kills.filter(item => this.checkDanger(figure, item))
-        if (data.castling) data.castling = data.castling.filter(item => this.checkDanger(figure, item.movement))
+
+    simulateStep(figure, [cellPosX, cellPosY]) {
+        const { x: figurePosX, y: figurePosY } = figure.position;
+        const replacedCell = this.changeFigurePos(figurePosX, figurePosY, cellPosX, cellPosY)
+        const isCheckKing = this.getIsCheck()
+        this.changeFigurePos(cellPosX, cellPosY, figurePosX, figurePosY, replacedCell)
+        return !(isCheckKing && isCheckKing.color === figure.color)
+    }
+
+    getPossibleMovement(figure, data) {
+        data.moves = data.moves.filter(cell => this.simulateStep(figure, cell))
+        data.kills = data.kills.filter(cell => this.simulateStep(figure, cell))
+        if (data.castling) data.castling = data.castling.filter(castlingStep => {
+            return this.simulateStep(castlingStep.king.figure, castlingStep.king.newPosition)
+            // this.simulateStep(castlingBlock.rook.figure, castlingBlock.rook.movement)
+        })
         return data
     }
 
     parseMovement(figure) {
         let { x, y } = figure.position
         const allMovement = figure.getPossibleSteps(this.figures)
-        const possibleMovement = this.parsePossibleMovement(figure, allMovement)
+        const possibleMovement = this.getPossibleMovement(figure, allMovement)
 
         if (!this.isCheck || this.figures[y][x].type !== 'king') this.cells[y][x] = 'selected'
 
@@ -112,15 +108,13 @@ export default class BoardModel {
             }
         })
         if (possibleMovement.castling) {
-            figure.castlingVariants.clear()
-            possibleMovement.castling.map(({ movement, rook }) => {
-                this.cells[movement[1]][movement[0]] = 'castling'
-                figure.castlingVariants.set(JSON.stringify({ x: movement[0], y: movement[1] }), rook)
+            possibleMovement.castling.map(({ king}) => {
+                this.cells[king.newPosition[1]][king.newPosition[0]] = 'castling'
             })
         }
     }
 
-    parseCheck(pos) {
+    showCheck(pos) {
         this.cells[pos.y][pos.x] = 'check'
     }
 
@@ -142,7 +136,7 @@ export default class BoardModel {
     hasAnyMovement(figuresFiltered) {
         for ( const figure of figuresFiltered ) {
             let movement = figure.getPossibleSteps(this.figures)
-            let possibleMovement = this.parsePossibleMovement(figure, movement)
+            let possibleMovement = this.getPossibleMovement(figure, movement)
             if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0) {
                 return false
             }
@@ -186,8 +180,8 @@ export default class BoardModel {
             for ( let x = 0; x < this.figures[y].length; x++ ) {
                 let figure = this.figures[y][x]
                 if (figure && figure.color === color) {
-                    const allMovement = figure.showMovement(this.figures)
-                    const possibleMovement = this.parsePossibleMovement(figure, allMovement)
+                    const allMovement = figure.getPossibleSteps(this.figures)
+                    const possibleMovement = this.getPossibleMovement(figure, allMovement)
                     if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0) {
                         return false
                     }

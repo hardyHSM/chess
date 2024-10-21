@@ -26,7 +26,6 @@ export default class Figure {
 
                     const cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
 
-
                     if (cellStatus === 'free') {
                         result.moves.push([cellPosX, cellPosY])
                     } else if (cellStatus === 'kill') {

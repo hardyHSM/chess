@@ -15,26 +15,35 @@ export default class BoardController {
     choseSwap = false
 
     constructor(root) {
+        this.createBoards(root)
+        this.start()
+    }
+
+    createBoards(root) {
         this.view = new BoardView(root)
 
         this.leftBoard = new SideBoard({
-            x: 0,
-            y: 0,
-            width: this.view.CELL_W * 2,
-            height: this.view.SIZE_H,
+            x: 0, y: 0, width: this.view.CELL_W * 2, height: this.view.SIZE_H,
             classes: 'left-board',
             color: this.view.WHITE
         })
         this.rightBoard = new SideBoard({
-            x: 0,
-            y: 0,
-            width: this.view.CELL_W * 2,
-            height: this.view.SIZE_H,
+            x: 0, y: 0, width: this.view.CELL_W * 2, height: this.view.SIZE_H,
             classes: 'right-board',
             color: this.view.WHITE
         })
 
-        this.start()
+        this.leftBoard.render(this.view.WHITE)
+        this.rightBoard.render(this.view.WHITE)
+    }
+
+    initHandlers() {
+        this.view.canvasFigure.addEventListener('click', (e) => this.clickHandlerField(e))
+        document.addEventListener('keydown', (event) => {
+            if ((event.ctrlKey && event.key === 'z') || (event.ctrlKey && event.key === 'я')) {
+                this.setPrevState()
+            }
+        })
     }
 
     start() {
@@ -42,14 +51,9 @@ export default class BoardController {
         this.view.renderCells(this.model.cells)
         this.view.renderFigures(this.model.figures)
         this.view.renderInfoStep(this.game.currentSide)
-        this.leftBoard.render(this.view.WHITE)
-        this.rightBoard.render(this.view.WHITE)
-        this.view.canvasFigure.addEventListener('click', (e) => this.clickHandlerField(e))
-        document.addEventListener('keydown', (event) => {
-            if ((event.ctrlKey && event.key === 'z') || (event.ctrlKey && event.key === 'я')) {
-                this.setPrevState()
-            }
-        })
+
+        this.initHandlers()
+
         this.model.history.addItem({
             figures: this.model.figures,
             cells: this.model.cells,
@@ -88,7 +92,10 @@ export default class BoardController {
         if (!cell) return
 
         this.currentFigure.isActive = false
-        if (this.prevMovement) this.model.showMovementCells(this.prevMovement)
+        if (this.prevMovement) {
+            this.model.clearCells(['check'])
+            this.model.showPrevStep(this.prevMovement)
+        }
 
         this.model.history.addItem({
             figures: this.model.figures,
@@ -134,7 +141,9 @@ export default class BoardController {
         if (!figure || this.movingFigure || this.game.currentSide !== figure.color) return
 
         this.model.clearCells(['movement', 'check'])
-        if (this.prevMovement) this.model.showMovementCells(this.prevMovement)
+        if (this.prevMovement) {
+            this.model.showPrevStep(this.prevMovement)
+        }
         if (!figure.isActive) {
             this.currentFigure && (this.currentFigure.isActive = false)
             this.currentFigure = figure
@@ -160,8 +169,6 @@ export default class BoardController {
     }
 
     doCastling(coords) {
-        let rook = this.currentFigure.castlingVariants.get(JSON.stringify(coords))
-
         this.moveFigure(this.currentFigure, coords, true)
         this.moveFigure(rook.figure, { x: rook.movement[0], y: rook.movement[1] }, true)
     }
@@ -208,7 +215,7 @@ export default class BoardController {
                     from: movingFigure.from,
                     to: movingFigure.to
                 }
-                this.model.showMovementCells(this.prevMovement)
+                this.model.showPrevStep(this.prevMovement)
             }
             this.view.renderCells(this.model.cells)
             return
@@ -292,7 +299,7 @@ export default class BoardController {
             let mate = this.checkMate(isCheck)
             if (mate) return
             this.model.isCheck = true
-            this.model.parseCheck(isCheck.position)
+            this.model.showCheck(isCheck.position)
             this.view.renderInfoCheck(this.game.currentSide)
         } else {
             this.model.clearCells()

@@ -25,20 +25,19 @@ export default class King extends Figure {
                 black: imgBlack
             }
         })
-        this.castlingVariants = new Map() // ???
-        this.castling = [[-1, -2, -3, -4, -5, -6, -7], [1, 2, 3, 4, 5, 6, 7]]
+        this.castlingOffsets = [[-1, -2, -3, -4, -5, -6, -7], [1, 2, 3, 4, 5, 6, 7]]
     }
 
-    showMovement(model) {
+    getPossibleSteps(model) {
         const res = super.getPossibleSteps(model)
         const castling = []
 
-        this.castling.forEach(offsetCells => {
+        this.castlingOffsets.forEach(offsetCells => {
             for ( const offsetX of offsetCells ) {
                 const { x: kingPosX, y: kingPosY } = this.position
 
                 const cellStatus = this.getCellStatus(kingPosX + offsetX, kingPosY, model)
-                if (cellStatus === 'outsideBoard' && cellStatus !== 'rook') {
+                if (cellStatus === 'outsideBoard' ||  cellStatus === 'stop') {
                     break
                 }
                 if (cellStatus === 'rook') {
@@ -51,10 +50,13 @@ export default class King extends Figure {
                         kingPosY
                     ]
                     castling.push({
-                        movement: offsetPositionKing,
+                        king: {
+                            figure: this,
+                            newPosition: offsetPositionKing,
+                        },
                         rook: {
                             figure: rook,
-                            movement: offsetPositionRook
+                            newPosition: offsetPositionRook
                         }
                     })
                     break

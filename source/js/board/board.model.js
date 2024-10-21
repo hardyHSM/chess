@@ -8,17 +8,6 @@ import HistoryGame from '../core/history.game'
 import { cloneDeep } from 'lodash'
 
 export default class BoardModel {
-    // startPosition  = [
-    //     [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
-    //     [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
-    //     [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
-    // ]
-
     startPosition  = [
         [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
         [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
@@ -27,8 +16,9 @@ export default class BoardModel {
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
-        [[Rook, 'white'], 0, 0, 0, [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
+        [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
     ]
+    
     constructor() {
         this.cells = new Array(8).fill(0).map(() => new Array(8).fill(0))
         this.history = new HistoryGame()
@@ -77,8 +67,9 @@ export default class BoardModel {
         data.moves = data.moves.filter(cell => this.simulateStep(figure, cell))
         data.kills = data.kills.filter(cell => this.simulateStep(figure, cell))
         if (data.castling) data.castling = data.castling.filter(castlingStep => {
+            console.log(castlingStep)
             return this.simulateStep(castlingStep.king.figure, castlingStep.king.newPosition)
-            // this.simulateStep(castlingBlock.rook.figure, castlingBlock.rook.movement)
+                && this.simulateStep(castlingStep.rook.figure, castlingStep.rook.newPosition)
         })
         return data
     }

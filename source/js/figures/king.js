@@ -4,6 +4,9 @@ import imgWhite from '../../assets/king-white.svg'
 
 
 export default class King extends Figure {
+    pinnedRooks = new Map()
+    castlingOffsets = [[-1, -2, -3, -4, -5, -6, -7], [1, 2, 3, 4, 5, 6, 7]]
+
     constructor({ x, y, color }) {
         super({
             x,
@@ -25,7 +28,6 @@ export default class King extends Figure {
                 black: imgBlack
             }
         })
-        this.castlingOffsets = [[-1, -2, -3, -4, -5, -6, -7], [1, 2, 3, 4, 5, 6, 7]]
     }
 
     getPossibleSteps(model) {
@@ -37,7 +39,7 @@ export default class King extends Figure {
                 const { x: kingPosX, y: kingPosY } = this.position
 
                 const cellStatus = this.getCellStatus(kingPosX + offsetX, kingPosY, model)
-                if (cellStatus === 'outsideBoard' ||  cellStatus === 'stop') {
+                if (cellStatus === 'outsideBoard' || cellStatus === 'stop') {
                     break
                 }
                 if (cellStatus === 'rook') {
@@ -49,10 +51,17 @@ export default class King extends Figure {
                         offsetX > 0 ? (offsetPositionKing[0] - 1) : (offsetPositionKing[0] + 1),
                         kingPosY
                     ]
+                    this.pinnedRooks.set(JSON.stringify({
+                        x: offsetPositionKing[0],
+                        y: offsetPositionKing[1]
+                    }), {
+                        rook,
+                        offsetPositionRook
+                    })
                     castling.push({
                         king: {
                             figure: this,
-                            newPosition: offsetPositionKing,
+                            newPosition: offsetPositionKing
                         },
                         rook: {
                             figure: rook,

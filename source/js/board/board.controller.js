@@ -168,9 +168,10 @@ export default class BoardController {
         this.animationMovingFigure(movingFigure, printMovement)
     }
 
-    doCastling(coords) {
-        this.moveFigure(this.currentFigure, coords, true)
-        this.moveFigure(rook.figure, { x: rook.movement[0], y: rook.movement[1] }, true)
+    doCastling(newKingPosition) {
+        const { rook, offsetPositionRook } = this.currentFigure.pinnedRooks.get(JSON.stringify(newKingPosition))
+        this.moveFigure(this.currentFigure, newKingPosition, true)
+        this.moveFigure(rook, { x: offsetPositionRook[0], y: offsetPositionRook[1] }, true)
     }
 
     parseSwapBoard() {
@@ -269,7 +270,7 @@ export default class BoardController {
         let king = null
         this.model.figures.forEach(row => {
             row.forEach(figure => {
-                if(figure.type === 'king' && figure.color === this.game.getOtherSide()) {
+                if (figure.type === 'king' && figure.color === this.game.getOtherSide()) {
                     king = figure
                 }
             })

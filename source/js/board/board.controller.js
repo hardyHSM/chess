@@ -12,11 +12,12 @@ export default class BoardController {
     currentBoard = null
     movingFigure = null
     prevMovement = null
-    choseSwap = false
+    swapState = false
 
     constructor(root) {
         this.createBoards(root)
         this.start()
+        window.controller = this
     }
 
     createBoards(root) {
@@ -53,15 +54,8 @@ export default class BoardController {
         this.view.renderInfoStep(this.game.currentSide)
 
         this.initHandlers()
+        this.addHistoryState()
 
-        this.model.history.addItem({
-            figures: this.model.figures,
-            cells: this.model.cells,
-            currentSide: this.game.currentSide,
-            leftBoard: this.leftBoard.model,
-            rightBoard: this.rightBoard.model,
-            boardInfo: this.view.infoData
-        })
         this.timer.start((string) => {
             this.view.renderTimer(string)
         })
@@ -75,28 +69,104 @@ export default class BoardController {
     }
 
     clickHandlerField(e) {
-        if (this.game.isEnd || this.choseSwap) return
+        if (this.game.isEnd || this.swapState) return
 
-        let coords = this.getPositionClick(e)
-        let cell = this.model.cells[coords.y][coords.x]
+        const position = this.getPositionClick(e)
+        const cell = this.model.cells[position.y][position.x]
 
         if (!cell || cell === 'movement' || cell === 'selected' || cell === 'check') {
-            this.clickHandlerFigures(coords)
+            this.clickHandlerFigures(position)
         } else {
-            this.clickHandlerCells(coords)
+            this.clickHandlerCells(position)
         }
     }
 
-    clickHandlerCells(coords) {
-        let cell = this.model.cells[coords.y][coords.x]
-        if (!cell) return
 
+    clickHandlerFigures(position) {
+        let figure = this.model.figures[position.y][position.x]
+        if (!figure || this.movingFigure || this.game.currentSide !== figure.color) return
+        this.parsePrevStep()
+        this.toggleActiveFigure(figure)
+    }
+
+    clickHandlerCells(position) {
+        const cell = this.model.cells[position.y][position.x]
         this.currentFigure.isActive = false
-        if (this.prevMovement) {
-            this.model.clearCells(['check'])
-            this.model.showPrevStep(this.prevMovement)
-        }
+        this.parsePrevStep()
+        this.addHistoryState()
 
+        if (cell === 'danger') {
+            this.removeFigure(position)
+        }
+        if (cell === 'swap') {
+            this.removeFigure(position)
+            this.swapState = true
+        }
+        if (cell === 'castling') {
+            this.doCastling(position)
+            this.view.renderInfoStep(this.game.currentSide)
+            return
+        }
+        this.moveFigure(this.currentFigure, position)
+        this.afterStep()
+    }
+
+
+    moveFigure(figure, position) {
+        this.prevMovement = {
+            from: { ...figure.position },
+            to: position
+        }
+        this.parsePrevStep()
+        const { x: fromX, y: fromY } = figure.position
+        const { x: toX, y: toY } = position
+
+        this.model.changeFigurePos(fromX, fromY, toX, toY)
+
+        this.view.renderCells(this.model.cells)
+        this.view.renderFigures(this.model.figures)
+
+    }
+
+    toggleActiveFigure(figure) {
+        if (figure === this.currentFigure) {
+            this.currentFigure.isActive = false
+            this.currentFigure = null
+        } else {
+            this.currentFigure = figure
+            this.currentFigure.isActive = true
+            this.model.parseMovementCells(figure)
+        }
+        this.view.renderCells(this.model.cells)
+    }
+
+    removeFigure(position) {
+        const figure = this.model.figures[position.y][position.x]
+        const board = figure.color === 'white' ? this.leftBoard : this.rightBoard
+
+        board.addItem(figure)
+        board.render()
+    }
+
+    doCastling(newKingPosition) {
+        const { rook, offsetPositionRook } = this.currentFigure.pinnedRooks.get(JSON.stringify(newKingPosition))
+        this.moveFigure(rook, { x: offsetPositionRook[0], y: offsetPositionRook[1] }, true)
+        this.moveFigure(this.currentFigure, newKingPosition)
+        this.afterStep()
+    }
+
+    parseSwapBoard() {
+        this.currentBoard = this.currentFigure.color === 'white' ? this.leftBoard : this.rightBoard
+        if (!this.currentBoard.hasAnyItem()) {
+            this.swapState = false
+            return
+        }
+        this.view.renderInfoSwap()
+        this.view.showBoardFigures(this.currentBoard)
+        this.currentBoard.sideBoard.addEventListener('click', this.handlerClickSideBoard)
+    }
+
+    addHistoryState() {
         this.model.history.addItem({
             figures: this.model.figures,
             cells: this.model.cells,
@@ -105,162 +175,83 @@ export default class BoardController {
             rightBoard: this.rightBoard.model,
             boardInfo: this.view.infoData
         })
-
-        if (cell === 'danger') {
-            const killedItem = this.model.figures[coords.y][coords.x]
-            if (killedItem.color === 'white') {
-                this.leftBoard.addItem(killedItem)
-                this.leftBoard.render()
-            } else {
-                this.rightBoard.addItem(killedItem)
-                this.rightBoard.render()
-            }
-        }
-        if (cell === 'swap') {
-            const killedItem = this.model.figures[coords.y][coords.x]
-            if (killedItem && killedItem.color === 'white') {
-                this.leftBoard.addItem(killedItem)
-                this.leftBoard.render()
-            }
-            if (killedItem && killedItem.color === 'black') {
-                this.rightBoard.addItem(killedItem)
-                this.rightBoard.render()
-            }
-            this.choseSwap = true
-        }
-        if (cell === 'castling') {
-            this.doCastling(coords)
-            this.view.renderInfoStep(this.game.currentSide)
-        }
-        this.moveFigure(this.currentFigure, coords)
-        this.view.renderInfoStep(this.game.currentSide)
     }
 
-    clickHandlerFigures(coords) {
-        let figure = this.model.figures[coords.y][coords.x]
-        if (!figure || this.movingFigure || this.game.currentSide !== figure.color) return
-
-        this.model.clearCells(['movement', 'check'])
+    parsePrevStep() {
+        this.model.clearCells(['check'])
         if (this.prevMovement) {
             this.model.showPrevStep(this.prevMovement)
         }
-        if (!figure.isActive) {
-            this.currentFigure && (this.currentFigure.isActive = false)
-            this.currentFigure = figure
-            this.model.parseMovement(figure)
-        }
-
-        this.currentFigure.isActive = !this.currentFigure.isActive
-        this.view.renderCells(this.model.cells)
     }
 
-    moveFigure(figure, coords, printMovement = true) {
-        this.model.clearCells(['movement', 'check'])
-
-        this.model.figures[figure.position.y][figure.position.x] = 0
-        const movingFigure = {
-            figure: figure,
-            current: Object.assign({}, figure.position),
-            from: figure.position,
-            to: coords
-        }
-
-        this.animationMovingFigure(movingFigure, printMovement)
-    }
-
-    doCastling(newKingPosition) {
-        const { rook, offsetPositionRook } = this.currentFigure.pinnedRooks.get(JSON.stringify(newKingPosition))
-        this.moveFigure(this.currentFigure, newKingPosition, true)
-        this.moveFigure(rook, { x: offsetPositionRook[0], y: offsetPositionRook[1] }, true)
-    }
-
-    parseSwapBoard() {
-        this.currentBoard = this.currentFigure.color === 'white' ? this.leftBoard : this.rightBoard
-        if (!this.currentBoard.hasAnyItem()) {
-            this.choseSwap = false
-            return
-        }
-        this.view.renderInfoSwap()
-        this.view.showBoardFigures(this.currentBoard)
-        this.currentBoard.sideBoard.addEventListener('click', this.handlerClickSideBoard)
-    }
-
-    animationMovingFigure(movingFigure, printMovement) {
-        this.movingFigure = true
-        let speed_x = 0.25
-        let speed_y = 0.25
-        let { x: x_from, y: y_from } = movingFigure.from
-        let { x: x_to, y: y_to } = movingFigure.to
-        let { x: x_curr, y: y_curr } = movingFigure.current
-
-
-        if (x_curr === x_to && y_curr === y_to) {
-            console.log('animation end')
-            this.model.figures[y_to][x_to] = 0
-            this.movingFigure = null
-            this.model.figures[y_to][x_to] = movingFigure.figure
-            movingFigure.isActive = false
-            this.model.figures[y_to][x_to].position = {
-                x: x_to, y: y_to
-            }
-
-            this.view.renderFigures(this.model.figures, movingFigure)
-            if (printMovement) {
-                this.afterStep()
-            }
-            if (this.choseSwap) {
-                this.parseSwapBoard()
-            }
-            if (printMovement) {
-                this.prevMovement = {
-                    from: movingFigure.from,
-                    to: movingFigure.to
-                }
-                this.model.showPrevStep(this.prevMovement)
-            }
-            this.view.renderCells(this.model.cells)
-            return
-        }
-
-        if (this.currentFigure.type === 'horse') {
-            if (Math.abs(x_to - x_from) < Math.abs(y_to - y_from)) {
-                speed_x = 0.25
-                speed_y = 0.50
-            } else {
-                speed_y = 0.25
-                speed_x = 0.50
-            }
-        }
-
-        if (y_curr > y_to) movingFigure.current.y -= speed_y
-        if (y_curr < y_to) movingFigure.current.y += speed_y
-        if (x_curr > x_to) movingFigure.current.x -= speed_x
-        if (x_curr < x_to) movingFigure.current.x += speed_x
-
-
-        this.view.renderFigures(this.model.figures, movingFigure)
-        requestAnimationFrame(() => {
-            this.animationMovingFigure(movingFigure, printMovement)
-        })
-    }
+    // animationMovingFigure(movingFigure, printMovement) {
+    //     this.movingFigure = true
+    //     let speed_x = 0.25
+    //     let speed_y = 0.25
+    //     let { x: x_from, y: y_from } = movingFigure.from
+    //     let { x: x_to, y: y_to } = movingFigure.to
+    //     let { x: x_curr, y: y_curr } = movingFigure.current
+    //
+    //
+    //     if (x_curr === x_to && y_curr === y_to) {
+    //         this.model.figures[y_to][x_to] = 0
+    //         this.movingFigure = null
+    //         this.model.figures[y_to][x_to] = movingFigure.figure
+    //         movingFigure.isActive = false
+    //         this.model.figures[y_to][x_to].position = {
+    //             x: x_to, y: y_to
+    //         }
+    //
+    //         this.view.renderFigures(this.model.figures, movingFigure)
+    //         if (printMovement) {
+    //             this.afterStep()
+    //         }
+    //         if (this.swapState) {
+    //             this.parseSwapBoard()
+    //         }
+    //         if (printMovement) {
+    //             this.prevMovement = {
+    //                 from: movingFigure.from,
+    //                 to: movingFigure.to
+    //             }
+    //             this.model.showPrevStep(this.prevMovement)
+    //         }
+    //         this.view.renderCells(this.model.cells)
+    //         return
+    //     }
+    //
+    //     if (this.currentFigure.type === 'horse') {
+    //         if (Math.abs(x_to - x_from) < Math.abs(y_to - y_from)) {
+    //             speed_x = 0.25
+    //             speed_y = 0.50
+    //         } else {
+    //             speed_y = 0.25
+    //             speed_x = 0.50
+    //         }
+    //     }
+    //
+    //     if (y_curr > y_to) movingFigure.current.y -= speed_y
+    //     if (y_curr < y_to) movingFigure.current.y += speed_y
+    //     if (x_curr > x_to) movingFigure.current.x -= speed_x
+    //     if (x_curr < x_to) movingFigure.current.x += speed_x
+    //
+    //
+    //     this.view.renderFigures(this.model.figures, movingFigure)
+    //     requestAnimationFrame(() => {
+    //         this.animationMovingFigure(movingFigure, printMovement)
+    //     })
+    // }
 
     handlerClickSideBoard = (e) => {
-        let coords = this.getPositionClick(e)
-        let figure = this.currentBoard.model[coords.y][coords.x]
+        let { x, y } = this.getPositionClick(e)
+        let figure = this.currentBoard.model[y][x]
 
         if (!figure) return
 
-        figure.position = {
-            x: this.currentFigure.position.x,
-            y: this.currentFigure.position.y
-        }
-        this.model.figures[this.currentFigure.position.y][this.currentFigure.position.x] = figure
-        this.currentBoard.removeItem({
-            x: coords.x,
-            y: coords.y
-        })
+        this.moveFigure(figure, this.currentFigure.position)
+        this.currentBoard.removeItem({ x, y })
         this.currentBoard.render()
-        this.choseSwap = false
+        this.swapState = false
         this.view.renderFigures(this.model.figures)
         this.game.changeStep()
         this.afterStep()
@@ -279,7 +270,7 @@ export default class BoardController {
     }
 
     checkMate(figure) {
-        let isMate = this.model.checkMate(figure.color)
+        let isMate = this.model.getMateState(figure.color)
         if (isMate) {
             this.game.isEnd = true
             this.game.changeStep()
@@ -292,31 +283,37 @@ export default class BoardController {
     }
 
     afterStep() {
-        console.log('after step')
+
         this.game.changeStep()
-        let isCheck = this.model.getIsCheck()
-        this.model.clearCells(['movement'])
+        let isCheck = this.model.getCheckState()[0]
+        this.model.clearCells(['check', 'movement'])
         if (isCheck) {
             let mate = this.checkMate(isCheck)
             if (mate) return
             this.model.isCheck = true
-            this.model.showCheck(isCheck.position)
+            this.model.setCheckCell(isCheck.position)
+            this.view.renderCells(this.model.cells)
             this.view.renderInfoCheck(this.game.currentSide)
         } else {
+
             this.model.clearCells()
+            this.view.renderCells(this.model.cells)
             this.view.renderInfoStep(this.game.currentSide)
             this.model.isCheck = false
         }
-        let stalemate = this.model.getIsStalemate()
+        let stalemate = this.model.getStaleMateState()
         if (stalemate) {
             this.view.renderInfoStalemate()
             this.game.isEnd = true
+        }
+        if (this.swapState) {
+            this.parseSwapBoard()
         }
     }
 
     setPrevState() {
         this.game.isEnd = false
-        this.choseSwap = false
+        this.swapState = false
         this.prevMovement = null
         let lastState = this.model.history.getLast()
         if (!lastState) return
@@ -324,7 +321,6 @@ export default class BoardController {
             figures: lastState.figures,
             cells: lastState.cells
         })
-
 
         this.leftBoard.setState(lastState.leftBoard)
         this.rightBoard.setState(lastState.rightBoard)

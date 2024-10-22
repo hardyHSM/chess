@@ -106,9 +106,9 @@ export default class BoardView {
         this.root.insertAdjacentElement('afterbegin', this.wrapperInfo)
     }
 
-    renderFigures(model, movingFigure = null) {
+    renderFigures(figures, movingFigure = null) {
         this.clearFigures()
-        model.forEach((row, y) => {
+        figures.forEach((row, y) => {
             row.forEach((figure, x) => {
                 if (!figure) return
                 if (!figure.pic) {

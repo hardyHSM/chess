@@ -12,7 +12,7 @@ export default class Pawn extends Figure {
                 kills: color === 'white' ? [[-1, -1], [1, -1]] : [[1, 1], [-1, 1]],
                 steps: color === 'white' ? [[0, -1], [0, -2]] : [[0, 1], [0, 2]],
                 startPos: color === 'white' ? 6 : 1,
-                swap: color === 'white' ? 7 : 0
+                swap: color === 'white' ? 0 : 7
             },
             img: {
                 white: imgWhite,
@@ -39,7 +39,7 @@ export default class Pawn extends Figure {
                 const [moveOffsetX, moveOffsetY] = moveOffset
                 const [cellPosX, cellPosY] = [pawnPosX + moveOffsetX, pawnPosY + moveOffsetY]
 
-                let cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
+                const cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
 
                 if (cellStatus !== 'outsideBoard' && cellStatus !== 'stop') {
                     result.moves.push([cellPosX, cellPosY])
@@ -48,8 +48,8 @@ export default class Pawn extends Figure {
 
 
             movement.kills.map(item => {
-                let [x, y] = item
-                let cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
+                const [x, y] = item
+                const cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
 
                 if (cellStatus === 'stop') {
                     result.kills.push([pawnPosX + x, pawnPosY + y])

@@ -8,17 +8,28 @@ import HistoryGame from '../core/history.game'
 import { cloneDeep } from 'lodash'
 
 export default class BoardModel {
-    startPosition  = [
+    // startPosition  = [
+    //     [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
+    //     [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [0, 0, 0, 0, 0, 0, 0, 0],
+    //     [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
+    //     [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
+    // ]
+
+    startPosition = [
         [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
-        [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
+        [[Pawn, 'black'], [Pawn, 'black'], 0, 0, 0, 0, [Pawn, 'black'], [Pawn, 'black']],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
-        [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
+        [[Pawn, 'white'], [Pawn, 'white'], 0, 0, 0, 0, [Pawn, 'white'], [Pawn, 'white']],
+        [[Rook, 'white'], 0, 0, 0, [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
     ]
-    
+
     constructor() {
         this.cells = new Array(8).fill(0).map(() => new Array(8).fill(0))
         this.history = new HistoryGame()
@@ -43,74 +54,85 @@ export default class BoardModel {
     }
 
     showPrevStep({ from, to }) {
-        this.cells[from.y][from.x] = 'movement'
-        this.cells[to.y][to.x] = 'movement'
+        this.clearCells(['check'])
+        this.setCellState([from.x, from.y], 'movement')
+        this.setCellState([to.x, to.y], 'movement')
     }
 
     changeFigurePos(sourceX, sourceY, targetX, targetY, insteadCell = 0) {
-        const replaceCell = this.figures[targetY][targetX]
-        this.figures[targetY][targetX] = this.figures[sourceY][sourceX]
+        const movingFigure = this.figures[sourceY][sourceX]
+        const replacedCell = this.figures[targetY][targetX]
+
+        movingFigure.position = { x: targetX, y: targetY }
+        this.figures[targetY][targetX] = movingFigure
         this.figures[sourceY][sourceX] = insteadCell
-        return replaceCell
+
+        return replacedCell
     }
 
-
     simulateStep(figure, [cellPosX, cellPosY]) {
-        const { x: figurePosX, y: figurePosY } = figure.position;
+        const { x: figurePosX, y: figurePosY } = figure.position
         const replacedCell = this.changeFigurePos(figurePosX, figurePosY, cellPosX, cellPosY)
-        const isCheckKing = this.getIsCheck()
+        const checkedKings = this.getCheckState()
+        console.log(checkedKings)
         this.changeFigurePos(cellPosX, cellPosY, figurePosX, figurePosY, replacedCell)
-        return !(isCheckKing && isCheckKing.color === figure.color)
+        return !(checkedKings[0] && checkedKings[0].color === figure.color )
     }
 
     getPossibleMovement(figure, data) {
         data.moves = data.moves.filter(cell => this.simulateStep(figure, cell))
         data.kills = data.kills.filter(cell => this.simulateStep(figure, cell))
         if (data.castling) data.castling = data.castling.filter(castlingStep => {
-            console.log(castlingStep)
             return this.simulateStep(castlingStep.king.figure, castlingStep.king.newPosition)
                 && this.simulateStep(castlingStep.rook.figure, castlingStep.rook.newPosition)
         })
         return data
     }
 
-    parseMovement(figure) {
-        let { x, y } = figure.position
+    setCellState(cell, state) {
+        const [x, y] = cell
+        this.cells[y][x] = state
+    }
+
+    parseMovementCells(figure) {
+        const { x, y } = figure.position
         const allMovement = figure.getPossibleSteps(this.figures)
         const possibleMovement = this.getPossibleMovement(figure, allMovement)
 
-        if (!this.isCheck || this.figures[y][x].type !== 'king') this.cells[y][x] = 'selected'
+        if (!this.isCheck || this.figures[y][x].type !== 'king') {
+            this.setCellState([x, y], 'selected')
+        }
 
-        possibleMovement.moves.map(item => {
-            const [x, y] = item
-            if (figure.type === 'pawn' && figure.movement.swap === y) {
-                this.cells[y][x] = 'swap'
+        possibleMovement.moves.map(cell => {
+            const [_, cellPosY] = cell
+            if (figure.type === 'pawn' && figure.movement.swap === cellPosY) {
+                this.setCellState(cell, 'swap')
             } else {
-                this.cells[y][x] = 'active'
+                this.setCellState(cell, 'active')
             }
         })
-        possibleMovement.kills.map(item => {
-            const [x, y] = item
+        possibleMovement.kills.map(cell => {
+            const [_, cellPosY] = cell
 
-            if (figure.type === 'pawn' && figure.movement.swap === y) {
-                this.cells[y][x] = 'swap'
+            if (figure.type === 'pawn' && figure.movement.swap === cellPosY) {
+                this.setCellState(cell, 'swap')
             } else {
-                this.cells[y][x] = 'danger'
+                this.setCellState(cell, 'danger')
             }
         })
         if (possibleMovement.castling) {
-            possibleMovement.castling.map(({ king}) => {
-                this.cells[king.newPosition[1]][king.newPosition[0]] = 'castling'
+            possibleMovement.castling.map(({ king }) => {
+                this.setCellState([king.newPosition[0], king.newPosition[1]], 'castling')
             })
         }
     }
 
-    showCheck(pos) {
-        this.cells[pos.y][pos.x] = 'check'
+    setCheckCell(pos) {
+        this.setCellState([pos.x, pos.y], 'check')
     }
 
     filterFiguresByColors(color) {
-        let colorsFigures = []
+        const colorsFigures = []
         for ( let y = 0; y < this.figures.length; y++ ) {
             for ( let x = 0; x < this.figures[y].length; x++ ) {
                 let figure = this.figures[y][x]
@@ -124,10 +146,10 @@ export default class BoardModel {
         return colorsFigures
     }
 
-    hasAnyMovement(figuresFiltered) {
-        for ( const figure of figuresFiltered ) {
-            let movement = figure.getPossibleSteps(this.figures)
-            let possibleMovement = this.getPossibleMovement(figure, movement)
+    hasAnyMovement(figures) {
+        for ( const figure of figures ) {
+            const movement = figure.getPossibleSteps(this.figures)
+            const possibleMovement = this.getPossibleMovement(figure, movement)
             if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0) {
                 return false
             }
@@ -135,28 +157,28 @@ export default class BoardModel {
         return true
     }
 
-    getIsStalemate() {
-        let figuresFilteredWhite = this.filterFiguresByColors('white')
-        let figuresFilteredBlack = this.filterFiguresByColors('black')
+    getStaleMateState() {
+        const figuresFilteredWhite = this.filterFiguresByColors('white')
+        const figuresFilteredBlack = this.filterFiguresByColors('black')
 
-        let stalemateWhite = this.hasAnyMovement(figuresFilteredWhite)
-        let stalemateBlack = this.hasAnyMovement(figuresFilteredBlack)
+        const stalemateWhite = this.hasAnyMovement(figuresFilteredWhite)
+        const stalemateBlack = this.hasAnyMovement(figuresFilteredBlack)
 
         if (stalemateBlack || stalemateWhite) {
             return true
         }
     }
 
-    getIsCheck() {
-        let res = null
+    getCheckState() {
+        let res = []
         for ( let y = 0; y < this.figures.length; y++ ) {
             for ( let x = 0; x < this.figures[y].length; x++ ) {
-                let item = this.figures[y][x]
-                if(item) {
-                    let kills = item.getPossibleSteps(this.figures).kills
-                    kills.forEach(kill => {
-                        if (this.figures[kill[1]][kill[0]].type === 'king') {
-                            res = this.figures[kill[1]][kill[0]]
+                const item = this.figures[y][x]
+                if (item) {
+                    const kills = item.getPossibleSteps(this.figures).kills
+                    kills.forEach(([x, y]) => {
+                        if (this.figures[y][x].type === 'king') {
+                            res.push(this.figures[y][x])
                         }
                     })
                 }
@@ -165,11 +187,10 @@ export default class BoardModel {
         return res
     }
 
-    checkMate(color) {
-        let mate = true
+    getMateState(color) {
         for ( let y = 0; y < this.figures.length; y++ ) {
             for ( let x = 0; x < this.figures[y].length; x++ ) {
-                let figure = this.figures[y][x]
+                const figure = this.figures[y][x]
                 if (figure && figure.color === color) {
                     const allMovement = figure.getPossibleSteps(this.figures)
                     const possibleMovement = this.getPossibleMovement(figure, allMovement)
@@ -179,7 +200,7 @@ export default class BoardModel {
                 }
             }
         }
-        return mate
+        return true
     }
 
     setState({ figures, cells }) {

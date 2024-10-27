@@ -39,9 +39,7 @@ export default class King extends Figure {
                 const { x: kingPosX, y: kingPosY } = this.position
 
                 const cellStatus = this.getCellStatus(kingPosX + offsetX, kingPosY, model)
-                if (cellStatus === 'outsideBoard' || cellStatus === 'stop') {
-                    break
-                }
+                if (['outsideBoard', 'stop', 'kill'].includes(cellStatus)) break
                 if (cellStatus === 'rook') {
                     const rook = model[kingPosY][kingPosX + offsetX]
                     if (Math.abs(offsetX) <= 2) break

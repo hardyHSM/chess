@@ -106,7 +106,7 @@ export default class BoardView {
         this.root.insertAdjacentElement('afterbegin', this.wrapperInfo)
     }
 
-    renderFigures(figures, movingFigure = null) {
+    renderFigures(figures) {
         this.clearFigures()
         figures.forEach((row, y) => {
             row.forEach((figure, x) => {
@@ -120,9 +120,15 @@ export default class BoardView {
                 }
             })
         })
-        if (movingFigure) {
-            this.contextFigure.drawImage(movingFigure.figure.pic, movingFigure.current.x * this.CELL_W, movingFigure.current.y * this.CELL_H, this.CELL_W, this.CELL_H)
-        }
+    }
+
+    renderFigureMoving(figure, x, y) {
+        this.contextFigure.drawImage(
+            figure.pic,
+            x * this.CELL_W,
+            y * this.CELL_H,
+            this.CELL_W,
+            this.CELL_H)
     }
 
     clearFigures() {

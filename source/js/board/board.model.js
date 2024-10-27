@@ -8,27 +8,17 @@ import HistoryGame from '../core/history.game'
 import { cloneDeep } from 'lodash'
 
 export default class BoardModel {
-    // startPosition  = [
-    //     [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
-    //     [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [0, 0, 0, 0, 0, 0, 0, 0],
-    //     [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
-    //     [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
-    // ]
-
     startPosition = [
         [[Rook, 'black'], [Horse, 'black'], [Bishop, 'black'], [Queen, 'black'], [King, 'black'], [Bishop, 'black'], [Horse, 'black'], [Rook, 'black']],
-        [[Pawn, 'black'], [Pawn, 'black'], 0, 0, 0, 0, [Pawn, 'black'], [Pawn, 'black']],
+        [[Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black'], [Pawn, 'black']],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        [[Pawn, 'white'], [Pawn, 'white'], 0, 0, 0, 0, [Pawn, 'white'], [Pawn, 'white']],
-        [[Rook, 'white'], 0, 0, 0, [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
+        [[Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white'], [Pawn, 'white']],
+        [[Rook, 'white'], [Horse, 'white'], [Bishop, 'white'], [Queen, 'white'], [King, 'white'], [Bishop, 'white'], [Horse, 'white'], [Rook, 'white']]
     ]
+
 
     constructor() {
         this.cells = new Array(8).fill(0).map(() => new Array(8).fill(0))
@@ -36,47 +26,54 @@ export default class BoardModel {
         this.figures = this.parseBoard(this.startPosition)
 
         this.isCheck = false
-        window.model = this
     }
 
-    clearCells(arg = []) {
-        this.cells = this.cells.map((column) => column.map((cell) => arg.includes(cell) ? cell : 0))
+    clearCells(args = []) {
+        this.cells = this.cells.map((column) => column.map((cell) => args.includes(cell) ? cell : 0))
     }
 
     parseBoard(startPosition) {
         return startPosition.map((row, y) => {
             return row.map((figure, x) => {
-                if (!figure) return 0
-                const [type, color] = figure
-                return new type({ color, x, y })
+                try {
+                    const [type, color] = figure
+                    return new type({ color, x, y })
+                } catch (e) {
+                    return 0
+                }
             })
         })
     }
 
-    showPrevStep({ from, to }) {
+    setPrevStep({ from, to }) {
         this.clearCells(['check'])
         this.setCellState([from.x, from.y], 'movement')
         this.setCellState([to.x, to.y], 'movement')
     }
 
     changeFigurePos(sourceX, sourceY, targetX, targetY, insteadCell = 0) {
-        const movingFigure = this.figures[sourceY][sourceX]
-        const replacedCell = this.figures[targetY][targetX]
+        const figure = this.figures[sourceY][sourceX]
+        const replacedFigure = this.figures[targetY][targetX]
+        figure.setPosition(targetX, targetY)
 
-        movingFigure.position = { x: targetX, y: targetY }
-        this.figures[targetY][targetX] = movingFigure
+        this.figures[targetY][targetX] = figure
         this.figures[sourceY][sourceX] = insteadCell
 
-        return replacedCell
+        return replacedFigure
     }
+
+    setFigureOnBoard(figure, [x, y]) {
+        figure.setPosition(x, y)
+        this.figures[y][x] = figure
+    }
+
 
     simulateStep(figure, [cellPosX, cellPosY]) {
         const { x: figurePosX, y: figurePosY } = figure.position
         const replacedCell = this.changeFigurePos(figurePosX, figurePosY, cellPosX, cellPosY)
-        const checkedKings = this.getCheckState()
-        console.log(checkedKings)
+        const checkedKing = this.getCheckState(figure.color === 'white' ? 'black' : 'white')
         this.changeFigurePos(cellPosX, cellPosY, figurePosX, figurePosY, replacedCell)
-        return !(checkedKings[0] && checkedKings[0].color === figure.color )
+        return !(checkedKing && checkedKing.color === figure.color)
     }
 
     getPossibleMovement(figure, data) {
@@ -89,12 +86,11 @@ export default class BoardModel {
         return data
     }
 
-    setCellState(cell, state) {
-        const [x, y] = cell
+    setCellState([x, y], state) {
         this.cells[y][x] = state
     }
 
-    parseMovementCells(figure) {
+    setMovementsOnCells(figure) {
         const { x, y } = figure.position
         const allMovement = figure.getPossibleSteps(this.figures)
         const possibleMovement = this.getPossibleMovement(figure, allMovement)
@@ -122,82 +118,56 @@ export default class BoardModel {
         })
         if (possibleMovement.castling) {
             possibleMovement.castling.map(({ king }) => {
-                this.setCellState([king.newPosition[0], king.newPosition[1]], 'castling')
+                this.setCellState(king.newPosition, 'castling')
             })
         }
     }
 
-    setCheckCell(pos) {
-        this.setCellState([pos.x, pos.y], 'check')
+    getAllFigures() {
+        return this.figures.flat().filter(Boolean)
     }
 
     filterFiguresByColors(color) {
-        const colorsFigures = []
-        for ( let y = 0; y < this.figures.length; y++ ) {
-            for ( let x = 0; x < this.figures[y].length; x++ ) {
-                let figure = this.figures[y][x]
-                if (figure) {
-                    if (figure.color === color) {
-                        colorsFigures.push(figure)
-                    }
-                }
-            }
-        }
-        return colorsFigures
+        return this.getAllFigures().filter(figure => figure.color === color)
     }
 
     hasAnyMovement(figures) {
-        for ( const figure of figures ) {
+        return !figures.some(figure => {
             const movement = figure.getPossibleSteps(this.figures)
             const possibleMovement = this.getPossibleMovement(figure, movement)
-            if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0) {
-                return false
-            }
-        }
-        return true
+            return possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0
+        })
     }
 
     getStaleMateState() {
-        const figuresFilteredWhite = this.filterFiguresByColors('white')
-        const figuresFilteredBlack = this.filterFiguresByColors('black')
-
-        const stalemateWhite = this.hasAnyMovement(figuresFilteredWhite)
-        const stalemateBlack = this.hasAnyMovement(figuresFilteredBlack)
-
-        if (stalemateBlack || stalemateWhite) {
-            return true
-        }
+        const whiteFigures = this.filterFiguresByColors('white')
+        const blackFigures = this.filterFiguresByColors('black')
+        return this.hasAnyMovement(whiteFigures) || this.hasAnyMovement(blackFigures)
     }
 
-    getCheckState() {
-        let res = []
-        for ( let y = 0; y < this.figures.length; y++ ) {
-            for ( let x = 0; x < this.figures[y].length; x++ ) {
-                const item = this.figures[y][x]
-                if (item) {
-                    const kills = item.getPossibleSteps(this.figures).kills
-                    kills.forEach(([x, y]) => {
-                        if (this.figures[y][x].type === 'king') {
-                            res.push(this.figures[y][x])
-                        }
-                    })
+
+    getCheckState(color = 'all') {
+        const figures = color === 'all' ? this.getAllFigures() : this.filterFiguresByColors(color)
+
+        for ( const figure of figures ) {
+            const kills = figure.getPossibleSteps(this.figures).kills
+            for ( const cell of kills ) {
+                const [cellPosX, cellPosY] = cell
+                if (this.figures[cellPosY][cellPosX].type === 'king') {
+                    return this.figures[cellPosY][cellPosX]
                 }
             }
         }
-        return res
+        return false
     }
 
     getMateState(color) {
-        for ( let y = 0; y < this.figures.length; y++ ) {
-            for ( let x = 0; x < this.figures[y].length; x++ ) {
-                const figure = this.figures[y][x]
-                if (figure && figure.color === color) {
-                    const allMovement = figure.getPossibleSteps(this.figures)
-                    const possibleMovement = this.getPossibleMovement(figure, allMovement)
-                    if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0) {
-                        return false
-                    }
-                }
+        const figures = this.filterFiguresByColors(color)
+        for ( const figure of figures ) {
+            const allMovement = figure.getPossibleSteps(this.figures)
+            const possibleMovement = this.getPossibleMovement(figure, allMovement)
+            if (possibleMovement.moves.length > 0 || possibleMovement.kills.length > 0 || possibleMovement?.castling?.length > 0) {
+                return false
             }
         }
         return true

@@ -35,23 +35,25 @@ export default class Pawn extends Figure {
                 movement.steps.length = 1
             }
 
-            movement.steps.forEach(moveOffset => {
+            for ( const moveOffset of movement.steps ) {
                 const [moveOffsetX, moveOffsetY] = moveOffset
                 const [cellPosX, cellPosY] = [pawnPosX + moveOffsetX, pawnPosY + moveOffsetY]
 
                 const cellStatus = this.getCellStatus(cellPosX, cellPosY, model)
 
-                if (cellStatus !== 'outsideBoard' && cellStatus !== 'stop') {
+                if (cellStatus === 'stop' || cellStatus === 'kill') {
+                    break
+                }
+                if (cellStatus !== 'outsideBoard' && cellStatus !== 'kill') {
                     result.moves.push([cellPosX, cellPosY])
                 }
-            })
-
+            }
 
             movement.kills.map(item => {
                 const [x, y] = item
                 const cellStatus = this.getCellStatus(pawnPosX + x, pawnPosY + y, model)
 
-                if (cellStatus === 'stop') {
+                if (cellStatus === 'kill') {
                     result.kills.push([pawnPosX + x, pawnPosY + y])
                 }
             })
@@ -68,8 +70,9 @@ export default class Pawn extends Figure {
         if (!figure) {
             return 'free'
         } else if (figure.color !== this.color) {
+            return 'kill'
+        } else if (figure.color === this.color) {
             return 'stop'
         }
-
     }
 }

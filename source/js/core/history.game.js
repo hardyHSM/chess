@@ -10,7 +10,8 @@ export default class HistoryGame {
             currentSide: data.currentSide,
             boardInfo: data.boardInfo,
             leftBoard: cloneDeep(data.leftBoard),
-            rightBoard: cloneDeep(data.rightBoard)
+            rightBoard: cloneDeep(data.rightBoard),
+            isCheck: data.isCheck
         })
     }
 

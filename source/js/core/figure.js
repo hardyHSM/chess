@@ -12,6 +12,11 @@ export default class Figure {
         this.pic = null
     }
 
+    setPosition(x, y) {
+        this.position.x = x
+        this.position.y = y
+    }
+
     getPossibleSteps(model) {
         const result = {
             moves: [],
